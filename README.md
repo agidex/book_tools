@@ -10,7 +10,8 @@ The combination of all tools. Type number of pages and "Calculate" - program sho
 ## CLI tools
 Command line interface programs.
 ### ```pack.py```
-Print the start and finish pages of every pack for given number of pages/
+Print the start and finish pages of every pack for given number of pages/pack size.
+
 Example:
 ```
 ENTER PAGES: 200
@@ -29,6 +30,7 @@ PAIRS:
 ```
 ### ```pages.py```
 Tries to calculate the right number of pages of your book (number of pages shoud divide by 4 without rest) and size and number of packs. The asterisk-marked line are good choice.
+
 Example:
 ```
 ENTER PAGES: 200
@@ -52,6 +54,7 @@ A4  PAGES/PACK    PACKS
 ```
 ### ```print_sick2.py```
 And finally the generator of print sequences. Take number of pages and pack size and print 2 lines: SideA and SideB. Print SideA on one side of paper and SideB on the other side.
+
 Example:
 ```
 ENTER PAGES: 200
