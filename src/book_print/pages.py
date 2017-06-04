@@ -59,10 +59,10 @@ def print_sick2(pages, pack_size):
     for pack in range(packs):
         offset = pack * pack_size
         for i in range(1, sheets + 1):
-            seq_a.extend(A(i, pack_size, offset))
-            seq_b.extend(B(i, pack_size, offset))
+            seq_a.append(A(i, pack_size, offset))
+            seq_b.append(B(i, pack_size, offset))
 
-    return seq_a, seq_b[::-1]
+    return flatten(seq_a), flatten(seq_b[::-1])
 
 
 def flatten(lst):

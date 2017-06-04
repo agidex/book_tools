@@ -222,6 +222,7 @@ class Model(object):
 
         with open(FILENAME, 'w') as sf:
             sf.write('%s\n' % line_a)
+            sf.write('\n')
             sf.write('%s\n' % line_b)
 
 
