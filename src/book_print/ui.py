@@ -1,9 +1,12 @@
 import tkinter
 import tkinter.ttk
+import itertools
 
 from book_print.pages import calculate_packs, print_sick2
 
+
 FILENAME = 'SEQUENCE.txt'
+PACK_SEP = '\n'
 
 
 def mk_scrollable_area(obj, obj_frame, sbars):
@@ -26,6 +29,10 @@ def mk_scrollable_area(obj, obj_frame, sbars):
     obj_frame.rowconfigure(0, weight=1)
 
 
+def list_group(lst, group_size):
+    return list(itertools.zip_longest(*(iter(lst),) * group_size))
+
+
 class View(object):
     root = None
 
@@ -33,8 +40,10 @@ class View(object):
     edits = {}
     text = {}
     labels = {}
+    radio = {}
 
     edit_pages = None
+    split_mode = None
 
     def __init__(self):
         self.root = tkinter.Tk()
@@ -44,6 +53,8 @@ class View(object):
         self.root.geometry('%sx%s+%s+%s' % (w, h, x, y))
 
         self.edits['pages'] = tkinter.IntVar()
+        self.split_mode = tkinter.BooleanVar()
+        self.split_mode.set(0)
 
         self.labels['sel_pages'] = tkinter.IntVar()
         self.labels['sel_pack_size'] = tkinter.IntVar()
@@ -83,8 +94,8 @@ class View(object):
         self.table.column('pack_count', width=50)
         self.table.column('good_choice', width=50)
 
-        self.table.heading('a4_pack',     text='A4 / Pack')
-        self.table.heading('pages_pack',  text='Pages / Pack')
+        self.table.heading('a4_pack',     text='A4 per Pack')
+        self.table.heading('pages_pack',  text='Pages per Pack')
         self.table.heading('pack_count',  text='Pack Count')
         self.table.heading('good_choice', text='Good Choice')
 
@@ -122,7 +133,19 @@ class View(object):
                                textvariable=self.labels['sel_pack_size'])
         label4.pack(side='left', fill='x')
 
-        self.buttons['generate'] = tkinter.ttk.Button(generate_frame,
+        self.radio['flow'] = tkinter.Radiobutton(selected_frame2,
+                                                 text='Flow Mode',
+                                                 variable=self.split_mode,
+                                                 value=0)
+        self.radio['flow'].pack(side='left', fill='x')
+
+        self.radio['split'] = tkinter.Radiobutton(selected_frame2,
+                                                  text='Split Mode',
+                                                  variable=self.split_mode,
+                                                  value=1)
+        self.radio['split'].pack(side='left', fill='x')
+
+        self.buttons['generate'] = tkinter.ttk.Button(selected_frame2,
                                                       text='Generate')
         self.buttons['generate'].pack(side='right', fill='x')
 
@@ -170,6 +193,9 @@ class View(object):
     def get_pages(self):
         return self.edits['pages'].get()
 
+    def is_split(self):
+        return bool(self.split_mode.get())
+
     def display_side_ab(self, line_a, line_b):
         self.text['side_a'].delete(1.0, 'end')
         self.text['side_b'].delete(1.0, 'end')
@@ -205,7 +231,7 @@ class Model(object):
         pages = self.ui.get_pages()
         self.ui.display_selected(pages, pack_size)
 
-    def generate(self):
+    def generate(self, forced=False, split=False):
         print('generate')
         pages = self.ui.get_pages()
         cur_item = self.ui.table.focus()
@@ -215,8 +241,34 @@ class Model(object):
 
         side_a = list(map(lambda item: str(item), side_a))
         side_b = list(map(lambda item: str(item), side_b))
-        line_a = ','.join(side_a)
-        line_b = ','.join(side_b)
+
+        if forced:
+            if split:
+                is_split = True
+            else:
+                is_split = False
+        else:
+            is_split = self.ui.is_split()
+
+        print('Split:', is_split)
+        if is_split:
+            side_a = list_group(side_a, int(pack_size/2))
+            side_b = list_group(side_b, int(pack_size/2))[::-1]
+
+            list_a = []
+            list_b = []
+
+            for sublist in side_a:
+                list_a.append(','.join(sublist))
+
+            for sublist in side_b:
+                list_b.append(','.join(sublist))
+
+            line_a = PACK_SEP.join(list_a)
+            line_b = PACK_SEP.join(list_b)
+        else:
+            line_a = ','.join(side_a)
+            line_b = ','.join(side_b)
 
         self.ui.display_side_ab(line_a, line_b)
 
@@ -240,8 +292,15 @@ class Ctrl(object):
         self.view.root.mainloop()
 
     def bind(self):
-        self.view.buttons['calculate'].bind("<Button-1>", self.calculate_handler)
-        self.view.buttons['generate'].bind("<Button-1>", self.generate_handler)
+        self.view.buttons['calculate'].bind("<Button-1>",
+                                            self.calculate_handler)
+        self.view.buttons['generate'].bind("<Button-1>",
+                                           self.generate_handler)
+
+        self.view.radio['flow'].bind("<Button-1>",
+                                     self.generate_forced_flow)
+        self.view.radio['split'].bind("<Button-1>",
+                                      self.generate_forced_split)
 
         self.view.table.bind("<ButtonRelease-1>", self.table_select_handler)
         self.view.table.bind("<Double-1>", self.generate_handler)
@@ -252,6 +311,12 @@ class Ctrl(object):
 
     def generate_handler(self, event):
         self.model.generate()
+
+    def generate_forced_flow(self, event):
+        self.model.generate(forced=True, split=False)
+
+    def generate_forced_split(self, event):
+        self.model.generate(forced=True, split=True)
 
     def table_select_handler(self, event):
         self.model.table_select()
